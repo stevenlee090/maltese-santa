@@ -17,7 +17,7 @@ export function Home() {
   const { t } = useTranslation();
 
   const [participants, setParticipants] = useLocalStorage<Record<string, Participant>>('malteseSantaParticipants', {});
-  const [instructions, setInstructions] = useLocalStorage<string>('malteseSantaInstructions', t('settings.defaultInstructions'));
+  const [instructions, setInstructions] = useLocalStorage<string>('malteseSantaInstructions', '');
   // Safe to keep: the link only holds encrypted envelopes, and the admin token
   // can only un-claim names, never read keys.
   const [published, setPublished] = useLocalStorage<PublishedDraw | null>('malteseSantaDraw', null);
@@ -94,6 +94,7 @@ export function Home() {
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                   aria-label={t('settings.title')}
+                  placeholder={t('settings.instructionsPlaceholder')}
                   className="w-full p-2 border-2 border-pink-200 focus:border-pink-400 outline-none rounded-lg min-h-[100px]"
                 />
               </div>

@@ -92,6 +92,6 @@ export const en = {
   settings: {
     title: "Event details",
     instructionsHelp: "Shown to everyone on their reveal page.",
-    defaultInstructions: "📅 Sunday, 20 December 2026\n💸 Budget: A$30",
+    instructionsPlaceholder: "e.g. 📅 date & place of the gift exchange\n💸 budget",
   },
 };
