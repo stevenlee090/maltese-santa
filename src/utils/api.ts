@@ -16,8 +16,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export function createDraw(keys: Record<string, string>, bundle: { envelopes: Record<string, string>; info?: string }) {
-  return request<{ id: string; adminToken: string }>('draws', { method: 'POST', body: JSON.stringify({ keys, bundle }) });
+export function createDraw(
+  keys: Record<string, string>,
+  bundle: { envelopes: Record<string, string>; info?: string },
+  readHashes: Record<string, string>,
+) {
+  return request<{ id: string; adminToken: string }>('draws', { method: 'POST', body: JSON.stringify({ keys, bundle, readHashes }) });
+}
+
+/** Owner saves their own wishlist (authenticated by their claim token). */
+export function saveWishes(drawId: string, name: string, token: string, wishes: string) {
+  return request<{ ok: true }>(`draws/${encodeURIComponent(drawId)}/wishes`, {
+    method: 'PUT',
+    body: JSON.stringify({ name, token, wishes }),
+  });
+}
+
+/** Read a wishlist as its owner (`token`) or as their Santa (`readToken`). */
+export function readWishes(drawId: string, name: string, auth: { token?: string; readToken?: string }) {
+  return request<{ wishes: string; updatedAt: number | null }>(`draws/${encodeURIComponent(drawId)}/wishes`, {
+    method: 'POST',
+    body: JSON.stringify({ name, ...auth }),
+  });
 }
 
 export function getBundle(drawId: string) {

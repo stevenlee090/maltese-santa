@@ -18,6 +18,8 @@ export interface Assignment {
   from: string;
   to: string;
   wishes?: string;
+  /** Lets the giver read the receiver's self-written wishlist (new draws only). */
+  readToken?: string;
 }
 
 /** Contents of the group link shared after the draw. */

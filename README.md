@@ -14,6 +14,7 @@ Forked from [arcanis/secretsanta](https://github.com/arcanis/secretsanta) (MIT, 
    The pairings are never shown, saved in the clear or exported. (Older long links that carry the envelopes in the `#` fragment still work.)
 3. Everyone opens the **same link**, taps their own name, and unwraps their match.
 4. The server releases each key **once**, to the first device that claims that name, and remembers that device. After that, the name shows as "opened" for everyone else.
+5. After unwrapping, each person can write **their own wishlist**. Only their Secret Santa can read it: a read token for each person's wishlist is sealed inside their Santa's envelope, and the server stores only its hash, so it never learns who the Santa is. Draws made before this feature fall back to "anyone with the group link can read wishlists".
 
 ### What this protects against (and what it doesn't)
 
@@ -47,7 +48,7 @@ yarn deploy                                # prints your https://maltese-santa.<
 
 - `src/`: React site (organiser page `#/`, reveal page `#/reveal`)
 - `src/utils/links.ts`: draw + envelope sealing, claim tokens
-- `worker/index.ts`: claim-once API (`POST /api/draws`, `GET /api/draws/:id`, `GET /api/draws/:id/bundle`, `POST /api/draws/:id/claim`, `POST /api/draws/:id/reset`)
+- `worker/index.ts`: claim-once API (`POST /api/draws`, `GET /api/draws/:id`, `GET /api/draws/:id/bundle`, `POST /api/draws/:id/claim`, `POST /api/draws/:id/reset`, `PUT|POST /api/draws/:id/wishes`)
 - `migrations/`: D1 schema
 - `static/maltese.svg`: the Maltese 🐶
 

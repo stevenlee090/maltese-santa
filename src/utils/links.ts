@@ -1,4 +1,4 @@
-import { decodeJson, decryptWithKey, encodeJson, encryptWithKey, randomToken } from './crypto';
+import { decodeJson, decryptWithKey, encodeJson, encryptWithKey, randomToken, sha256Hex } from './crypto';
 import { Assignment, DrawBundle, Participant } from '../types';
 import { generatePairs } from './generatePairs';
 import { createDraw } from './api';
@@ -11,6 +11,8 @@ export type SealedDraw = {
   bundle: DrawBundle;
   /** Giver name → key. Goes to the server, never into the link. */
   keys: Record<string, string>;
+  /** Receiver name → hash of their wishlist read token (the token itself only goes in their Santa's envelope). */
+  readHashes: Record<string, string>;
 };
 
 export type DrawError = 'needMoreParticipants' | 'duplicateNames' | 'invalidPairs';
@@ -38,6 +40,10 @@ export async function sealDraw(
   const order = new Map(list.map((p, i) => [p.id, i]));
   const pairings = [...pairs.pairings].sort((a, b) => order.get(a.giver.id)! - order.get(b.giver.id)!);
 
+  const readTokens = Object.fromEntries(list.map(p => [p.name, randomToken(24)]));
+  const readHashes: Record<string, string> = {};
+  for (const [name, token] of Object.entries(readTokens)) readHashes[name] = await sha256Hex(token);
+
   const envelopes: Record<string, string> = {};
   const keys: Record<string, string> = {};
   for (const { giver, receiver } of pairings) {
@@ -45,12 +51,13 @@ export async function sealDraw(
       from: giver.name,
       to: receiver.name,
       wishes: participants[receiver.id].wishes?.trim() || undefined,
+      readToken: readTokens[receiver.name],
     };
     keys[giver.name] = randomToken();
     envelopes[giver.name] = await encryptWithKey(JSON.stringify(assignment), keys[giver.name]);
   }
 
-  return { bundle: { v: 2, id: drawId, envelopes, info: info.trim() || undefined }, keys };
+  return { bundle: { v: 2, id: drawId, envelopes, info: info.trim() || undefined }, keys, readHashes };
 }
 
 /** Short share link: the envelopes are fetched from the server by id. */
@@ -77,7 +84,7 @@ export async function drawAndPublish(participants: Record<string, Participant>, 
 
   try {
     const { envelopes, info } = sealed.bundle;
-    const { id, adminToken } = await createDraw(sealed.keys, { envelopes, info });
+    const { id, adminToken } = await createDraw(sealed.keys, { envelopes, info }, sealed.readHashes);
     return { ok: true, url: shortUrl(id), drawId: id, adminToken };
   } catch {
     return { ok: false, error: 'server' };

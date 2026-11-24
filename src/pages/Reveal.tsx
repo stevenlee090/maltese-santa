@@ -7,7 +7,7 @@ import { Layout } from '../components/Layout';
 import { PostCard } from '../components/PostCard';
 import { Maltese } from '../components/Maltese';
 import { claimedNamesOnThisDevice, claimTokenFor, forgetClaim, openEnvelope, parseBundle } from '../utils/links';
-import { ApiError, claimSlot, getBundle, getStatus } from '../utils/api';
+import { ApiError, claimSlot, getBundle, getStatus, readWishes, saveWishes } from '../utils/api';
 import { Assignment, DrawBundle } from '../types';
 
 type View =
@@ -179,13 +179,102 @@ function RevealDraw({ bundle }: { bundle: DrawBundle }) {
 
           {view.kind === 'revealed' && (
             <>
-              <Unwrap assignment={view.assignment} info={bundle.info} />
+              <Unwrap assignment={view.assignment} info={bundle.info} drawId={bundle.id} />
               {names.length > 0 && mine.length > 1 && <div className="mt-6 text-center"><BackButton onClick={backToPicker} /></div>}
             </>
           )}
         </PostCard>
       </div>
     </Layout>
+  );
+}
+
+/** The giftee's wishes: organiser's notes + whatever they wrote themselves. */
+function TheirWishes({ drawId, assignment }: { drawId: string; assignment: Assignment }) {
+  const { t } = useTranslation();
+  const [own, setOwn] = useState<string | null>(null);
+
+  useEffect(() => {
+    readWishes(drawId, assignment.to, { readToken: assignment.readToken })
+      .then(r => setOwn(r.wishes))
+      .catch(() => setOwn(''));
+  }, [drawId, assignment.to, assignment.readToken]);
+
+  const nothing = !assignment.wishes && own === '';
+
+  return (
+    <div className="p-4 bg-pink-50 rounded-lg space-y-3">
+      <h2 className="font-bold text-pink-600 flex items-center gap-2"><Gift weight="fill" /> {t('reveal.wishesTitle')}</h2>
+      {own && (
+        <div>
+          <p className="text-xs uppercase tracking-wide text-pink-400">{t('reveal.inTheirWords', { name: assignment.to })}</p>
+          <p className="whitespace-pre-wrap text-pink-950/80" data-testid="their-own-wishes">{own}</p>
+        </div>
+      )}
+      {assignment.wishes && (
+        <div>
+          {own && <p className="text-xs uppercase tracking-wide text-pink-400">{t('reveal.fromOrganiser')}</p>}
+          <p className="whitespace-pre-wrap text-pink-950/70" data-testid="wishes">{assignment.wishes}</p>
+        </div>
+      )}
+      {nothing && <p className="text-pink-950/70" data-testid="wishes">{t('reveal.noWishesYet', { name: assignment.to })}</p>}
+    </div>
+  );
+}
+
+/** Lets the person write their own wishlist for whoever drew them. */
+function MyWishlist({ drawId, myName }: { drawId: string; myName: string }) {
+  const { t } = useTranslation();
+  const token = useMemo(() => claimTokenFor(drawId, myName), [drawId, myName]);
+  const [text, setText] = useState('');
+  const [saved, setSaved] = useState('');
+  const [state, setState] = useState<'loading' | 'idle' | 'saving' | 'saved' | 'error'>('loading');
+
+  useEffect(() => {
+    readWishes(drawId, myName, { token })
+      .then(r => { setText(r.wishes); setSaved(r.wishes); setState('idle'); })
+      .catch(() => setState('idle'));
+  }, [drawId, myName, token]);
+
+  const save = async () => {
+    setState('saving');
+    try {
+      await saveWishes(drawId, myName, token, text);
+      setSaved(text.trim());
+      setState('saved');
+    } catch {
+      setState('error');
+    }
+  };
+
+  const dirty = text.trim() !== saved;
+
+  return (
+    <div className="mt-6 p-4 text-left bg-white border-2 border-dashed border-pink-300 rounded-lg space-y-2" data-testid="my-wishlist">
+      <h2 className="font-bold text-pink-600 flex items-center gap-2"><PawPrint weight="fill" /> {t('reveal.myWishlistTitle')}</h2>
+      <p className="text-sm text-pink-950/60">{t('reveal.myWishlistHelp')}</p>
+      <textarea
+        value={text}
+        onChange={e => { setText(e.target.value); if (state === 'saved' || state === 'error') setState('idle'); }}
+        maxLength={500}
+        disabled={state === 'loading'}
+        placeholder={t('reveal.myWishlistPlaceholder')}
+        aria-label={t('reveal.myWishlistTitle')}
+        className="w-full p-2 border-2 border-pink-200 focus:border-pink-400 outline-none rounded-lg min-h-[90px]"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-pink-900/50">
+          {state === 'saved' ? t('reveal.myWishlistSaved') : state === 'error' ? t('reveal.myWishlistError') : `${text.length}/500`}
+        </span>
+        <button
+          onClick={save}
+          disabled={!dirty || state === 'saving' || state === 'loading'}
+          className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 disabled:opacity-50"
+        >
+          {state === 'saving' ? t('reveal.myWishlistSaving') : t('reveal.myWishlistSave')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -198,7 +287,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function Unwrap({ assignment, info }: { assignment: Assignment; info?: string }) {
+function Unwrap({ assignment, info, drawId }: { assignment: Assignment; info?: string; drawId: string }) {
   const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
 
@@ -240,10 +329,7 @@ function Unwrap({ assignment, info }: { assignment: Assignment; info?: string })
             <Maltese className="w-32 mx-auto -mt-2 animate-wag" />
 
             <div className="mt-6 text-left space-y-3">
-              <div className="p-4 bg-pink-50 rounded-lg">
-                <h2 className="font-bold text-pink-600 flex items-center gap-2 mb-1"><Gift weight="fill" /> {t('reveal.wishesTitle')}</h2>
-                <p className="whitespace-pre-wrap text-pink-950/70" data-testid="wishes">{assignment.wishes || t('reveal.noWishes')}</p>
-              </div>
+              <TheirWishes drawId={drawId} assignment={assignment} />
               {info && (
                 <div className="flex p-4 bg-white border-2 border-pink-100 rounded-lg leading-6 text-pink-950/70 whitespace-pre-wrap">
                   <Info size={22} className="mr-3 flex-none text-pink-400" />
@@ -251,6 +337,8 @@ function Unwrap({ assignment, info }: { assignment: Assignment; info?: string })
                 </div>
               )}
             </div>
+
+            <MyWishlist drawId={drawId} myName={assignment.from} />
           </motion.div>
         )}
       </AnimatePresence>

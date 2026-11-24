@@ -18,6 +18,8 @@ const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,100}$/;
 const MAX_ENVELOPE_LENGTH = 2000;
 const MAX_INFO_LENGTH = 1000;
+const MAX_WISHES_LENGTH = 500;
+const HASH_PATTERN = /^[0-9a-f]{64}$/;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -45,7 +47,12 @@ async function readJson<T>(request: Request): Promise<T | null> {
 }
 
 async function createDraw(request: Request, env: Env) {
-  const body = await readJson<{ keys?: Record<string, string>; bundle?: { envelopes?: Record<string, string>; info?: string } }>(request);
+  const body = await readJson<{
+    keys?: Record<string, string>;
+    bundle?: { envelopes?: Record<string, string>; info?: string };
+    /** Receiver name → SHA-256 of the wishlist read token hidden in their Santa's envelope. */
+    readHashes?: Record<string, string>;
+  }>(request);
   const entries = Object.entries(body?.keys ?? {});
   if (entries.length < 3 || entries.length > MAX_PARTICIPANTS) return json({ error: 'badRequest' }, 400);
   for (const [name, key] of entries) {
@@ -62,6 +69,11 @@ async function createDraw(request: Request, env: Env) {
     return json({ error: 'badRequest' }, 400);
   }
 
+  const readHashes = body?.readHashes ?? {};
+  if (entries.some(([name]) => typeof readHashes[name] !== 'string' || !HASH_PATTERN.test(readHashes[name]))) {
+    return json({ error: 'badRequest' }, 400);
+  }
+
   const id = randomToken(12);
   const adminToken = randomToken();
   const now = Date.now();
@@ -69,7 +81,7 @@ async function createDraw(request: Request, env: Env) {
   await env.DB.batch([
     env.DB.prepare('INSERT INTO draws (id, admin_hash, created_at) VALUES (?, ?, ?)').bind(id, await sha256(adminToken), now),
     ...entries.map(([name, key]) =>
-      env.DB.prepare('INSERT INTO slots (draw_id, name, key) VALUES (?, ?, ?)').bind(id, name, key)),
+      env.DB.prepare('INSERT INTO slots (draw_id, name, key, wishes_read_hash) VALUES (?, ?, ?, ?)').bind(id, name, key, readHashes[name])),
     env.DB.prepare('INSERT INTO bundles (draw_id, data) VALUES (?, ?)').bind(id, JSON.stringify({ envelopes, info })),
   ]);
 
@@ -107,6 +119,40 @@ async function claim(request: Request, env: Env, drawId: string) {
   return json({ error: 'alreadyClaimed' }, 409);
 }
 
+/** The owner (by claim token) updates their own wishlist. */
+async function writeWishes(request: Request, env: Env, drawId: string) {
+  const body = await readJson<{ name?: string; token?: string; wishes?: string }>(request);
+  if (typeof body?.name !== 'string' || typeof body?.token !== 'string' || typeof body?.wishes !== 'string') {
+    return json({ error: 'badRequest' }, 400);
+  }
+  const wishes = body.wishes.trim().slice(0, MAX_WISHES_LENGTH);
+  const update = await env.DB
+    .prepare('UPDATE slots SET wishes = ?, wishes_updated_at = ? WHERE draw_id = ? AND name = ? AND claim_hash = ?')
+    .bind(wishes || null, Date.now(), drawId, body.name, await sha256(body.token))
+    .run();
+  if (update.meta.changes !== 1) return json({ error: 'forbidden' }, 403);
+  return json({ ok: true });
+}
+
+/** Read a wishlist: the owner (claim token) or their Santa (read token from the envelope). */
+async function readWishes(request: Request, env: Env, drawId: string) {
+  const body = await readJson<{ name?: string; token?: string; readToken?: string }>(request);
+  if (typeof body?.name !== 'string') return json({ error: 'badRequest' }, 400);
+
+  const slot = await env.DB
+    .prepare('SELECT wishes, wishes_updated_at, wishes_read_hash, claim_hash FROM slots WHERE draw_id = ? AND name = ?')
+    .bind(drawId, body.name)
+    .first<{ wishes: string | null; wishes_updated_at: number | null; wishes_read_hash: string | null; claim_hash: string | null }>();
+  if (!slot) return json({ error: 'notFound' }, 404);
+
+  const isOwner = typeof body.token === 'string' && slot.claim_hash !== null && slot.claim_hash === await sha256(body.token);
+  const isSanta = typeof body.readToken === 'string' && slot.wishes_read_hash === await sha256(body.readToken);
+  const legacyDraw = slot.wishes_read_hash === null;
+  if (!isOwner && !isSanta && !legacyDraw) return json({ error: 'forbidden' }, 403);
+
+  return json({ wishes: slot.wishes ?? '', updatedAt: slot.wishes_updated_at });
+}
+
 async function status(env: Env, drawId: string) {
   const { results } = await env.DB
     .prepare('SELECT name, claimed_at FROM slots WHERE draw_id = ? ORDER BY rowid')
@@ -125,7 +171,8 @@ async function reset(request: Request, env: Env, drawId: string) {
   if (draw.admin_hash !== await sha256(body.adminToken)) return json({ error: 'forbidden' }, 403);
 
   await env.DB
-    .prepare('UPDATE slots SET claim_hash = NULL, claimed_at = NULL WHERE draw_id = ? AND name = ?')
+    // Also clear the wishlist: it may have been written by whoever wrongly opened this name.
+    .prepare('UPDATE slots SET claim_hash = NULL, claimed_at = NULL, wishes = NULL, wishes_updated_at = NULL WHERE draw_id = ? AND name = ?')
     .bind(drawId, body.name)
     .run();
   return json({ ok: true });
@@ -144,6 +191,8 @@ export default {
     if (drawId && action === 'bundle' && request.method === 'GET') return getBundle(env, drawId);
     if (drawId && action === 'claim' && request.method === 'POST') return claim(request, env, drawId);
     if (drawId && action === 'reset' && request.method === 'POST') return reset(request, env, drawId);
+    if (drawId && action === 'wishes' && request.method === 'PUT') return writeWishes(request, env, drawId);
+    if (drawId && action === 'wishes' && request.method === 'POST') return readWishes(request, env, drawId);
 
     return json({ error: 'notFound' }, 404);
   },

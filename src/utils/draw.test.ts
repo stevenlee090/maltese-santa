@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sealDraw, openEnvelope } from './links';
-import { randomToken } from './crypto';
+import { randomToken, sha256Hex } from './crypto';
 import { Participant } from '../types';
 
 const names = ['Haley', 'Baihan', 'David', 'Millie', 'Murphy', 'Steven'];
@@ -29,6 +29,13 @@ describe('sealDraw', () => {
       receivers.add(assignment.to);
     }
     expect(receivers.size).toBe(names.length);
+
+    // Each giver's envelope carries the read token for their receiver's wishlist;
+    // the server only gets its hash, keyed by the receiver (never the giver).
+    for (const name of names) {
+      const assignment = (await openEnvelope(sealed.bundle, name, sealed.keys[name]))!;
+      expect(await sha256Hex(assignment.readToken!)).toBe(sealed.readHashes[assignment.to]);
+    }
 
     // Someone else's key, or a random key, opens nothing.
     expect(await openEnvelope(sealed.bundle, 'Haley', sealed.keys.Steven)).toBeNull();
