@@ -34,9 +34,9 @@ describe('parseParticipantsText', () => {
 
     const participants = Object.values(result.participants);
     expect(participants).toHaveLength(3);
-    expect(participants.find(p => p.name === 'Alice')?.hint).toBe('likes cats');
-    expect(participants.find(p => p.name === 'Bob')?.hint).toBe('allergic to chocolate');
-    expect(participants.find(p => p.name === 'Charlie')?.hint).toBeUndefined();
+    expect(participants.find(p => p.name === 'Alice')?.wishes).toBe('likes cats');
+    expect(participants.find(p => p.name === 'Bob')?.wishes).toBe('allergic to chocolate');
+    expect(participants.find(p => p.name === 'Charlie')?.wishes).toBeUndefined();
   });
 
   it('should parse participants with rules', () => {
@@ -144,7 +144,7 @@ describe('formatParticipantText', () => {
       'id1': {
         id: 'id1',
         name: 'Alice',
-        hint: 'likes cats',
+        wishes: 'likes cats',
         rules: [
           { type: 'must', targetParticipantId: 'id2' },
           { type: 'mustNot', targetParticipantId: 'id3' }

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 430">
+  <defs>
+    <!-- Every fluffy blob of fur. Drawn twice: once with a thick outline, once plain on top,
+         so overlapping circles merge into one soft silhouette. -->
+    <g id="fluff">
+      <!-- tail plume -->
+      <circle cx="305" cy="262" r="30"/><circle cx="326" cy="236" r="26"/><circle cx="338" cy="210" r="20"/>
+      <!-- coat -->
+      <circle cx="200" cy="300" r="95"/>
+      <circle cx="138" cy="330" r="60"/><circle cx="262" cy="330" r="60"/>
+      <circle cx="118" cy="382" r="40"/><circle cx="168" cy="392" r="40"/>
+      <circle cx="232" cy="392" r="40"/><circle cx="282" cy="382" r="40"/>
+      <circle cx="200" cy="390" r="45"/>
+      <!-- front paws -->
+      <circle cx="166" cy="405" r="22"/><circle cx="234" cy="405" r="22"/>
+      <!-- long silky ears -->
+      <circle cx="124" cy="200" r="38"/><circle cx="112" cy="244" r="35"/><circle cx="114" cy="286" r="30"/><circle cx="122" cy="320" r="22"/>
+      <circle cx="276" cy="200" r="38"/><circle cx="288" cy="244" r="35"/><circle cx="286" cy="286" r="30"/><circle cx="278" cy="320" r="22"/>
+      <!-- head -->
+      <circle cx="200" cy="170" r="80"/>
+      <circle cx="152" cy="200" r="45"/><circle cx="248" cy="200" r="45"/>
+      <circle cx="200" cy="104" r="40"/><circle cx="164" cy="114" r="34"/><circle cx="236" cy="114" r="34"/>
+    </g>
+  </defs>
+
+  <ellipse cx="200" cy="422" rx="150" ry="9" fill="#f9a8c9" opacity=".45"/>
+
+  <use xlink:href="#fluff" href="#fluff" fill="#f6d3e1" stroke="#f6d3e1" stroke-width="8"/>
+  <use xlink:href="#fluff" href="#fluff" fill="#ffffff"/>
+
+  <!-- fur strands -->
+  <g fill="none" stroke="#f3d5e2" stroke-width="3" stroke-linecap="round">
+    <path d="M120 232 q-6 26 0 52"/><path d="M280 232 q6 26 0 52"/>
+    <path d="M160 310 q-8 30 -4 60"/><path d="M240 310 q8 30 4 60"/><path d="M200 330 q0 30 0 50"/>
+    <path d="M318 232 q10 10 6 26"/>
+  </g>
+
+  <!-- toes -->
+  <g fill="none" stroke="#efc6d6" stroke-width="3" stroke-linecap="round">
+    <path d="M158 412 v10"/><path d="M168 413 v10"/><path d="M226 413 v10"/><path d="M236 412 v10"/>
+  </g>
+
+  <!-- muzzle -->
+  <ellipse cx="200" cy="206" rx="40" ry="32" fill="#fff7fa"/>
+
+  <!-- blush -->
+  <ellipse cx="150" cy="202" rx="15" ry="8" fill="#ffb3cf" opacity=".85"/>
+  <ellipse cx="250" cy="202" rx="15" ry="8" fill="#ffb3cf" opacity=".85"/>
+
+  <!-- eyes -->
+  <g fill="#2a1a20">
+    <circle cx="170" cy="168" r="11"/><circle cx="230" cy="168" r="11"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="174" cy="163" r="4"/><circle cx="234" cy="163" r="4"/>
+    <circle cx="167" cy="172" r="1.8"/><circle cx="227" cy="172" r="1.8"/>
+  </g>
+
+  <!-- nose + mouth + tongue -->
+  <ellipse cx="200" cy="194" rx="13" ry="10" fill="#2a1a20"/>
+  <ellipse cx="196" cy="190" rx="4" ry="2.5" fill="#fff" opacity=".7"/>
+  <path d="M200 204 v6" stroke="#2a1a20" stroke-width="3" stroke-linecap="round"/>
+  <path d="M200 212 q8 10 18 2" fill="#ff8fb7" stroke="#2a1a20" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M182 210 q8 8 18 2" fill="none" stroke="#2a1a20" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- pink bow topknot -->
+  <g transform="translate(200 84)">
+    <path d="M0 6 C-22 -22 -54 -12 -46 12 C-40 32 -14 24 0 6 Z" fill="#f472b6" stroke="#db2777" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M0 6 C22 -22 54 -12 46 12 C40 32 14 24 0 6 Z" fill="#f472b6" stroke="#db2777" stroke-width="3" stroke-linejoin="round"/>
+    <g fill="#fff" opacity=".9">
+      <circle cx="-30" cy="4" r="3.5"/><circle cx="-20" cy="16" r="3"/><circle cx="-36" cy="16" r="2.5"/>
+      <circle cx="30" cy="4" r="3.5"/><circle cx="20" cy="16" r="3"/><circle cx="36" cy="16" r="2.5"/>
+    </g>
+    <circle cx="0" cy="7" r="10" fill="#ec4899" stroke="#db2777" stroke-width="3"/>
+  </g>
+
+  <!-- tiny santa-ish collar with bell -->
+  <path d="M146 244 q54 26 108 0" fill="none" stroke="#ec4899" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="200" cy="262" r="9" fill="#fcd34d" stroke="#d4a017" stroke-width="2.5"/>
+  <path d="M195 264 h10" stroke="#a16207" stroke-width="2" stroke-linecap="round"/>
+</svg>

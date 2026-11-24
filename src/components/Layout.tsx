@@ -1,20 +1,24 @@
-import { t } from "i18next";
-import { MenuItem, SideMenu } from "./SideMenu";
+import { SideMenu } from "./SideMenu";
+import { FallingTreats } from "./FallingTreats";
 
 export type LayoutProps = {
-  menuItems: React.ReactNode[];
+  menuItems?: React.ReactNode[];
   children: React.ReactNode;
+  narrow?: boolean;
 };
 
-export function Layout({ menuItems, children }: LayoutProps) {
+export function Layout({ menuItems = [], children, narrow = false }: LayoutProps) {
   return (
     <div className="min-h-screen flex lg:items-center justify-center p-4 lg:overflow-hidden">
-      <div className="container mx-auto max-w-5xl">
-        <SideMenu>
-          {menuItems}
-        </SideMenu>
+      <FallingTreats />
+      <div className={`relative container mx-auto ${narrow ? 'max-w-xl' : 'max-w-5xl'}`}>
+        {menuItems.length > 0 && (
+          <SideMenu>
+            {menuItems}
+          </SideMenu>
+        )}
 
-        <div className="my-12 md:my-16 flex flex-col justify-around lg:flex-row gap-12 md:gap-16">
+        <div className="my-10 md:my-16 flex flex-col justify-around lg:flex-row gap-12 md:gap-16">
           {children}
         </div>
       </div>

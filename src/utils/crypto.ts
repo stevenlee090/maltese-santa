@@ -1,70 +1,57 @@
-// Use a consistent key (this is just for obfuscation, not security)
-const ENCRYPTION_KEY_BYTES = new Uint8Array([
-  132, 41, 242, 153, 104, 87, 23, 190,
-  54, 187, 224, 176, 15, 198, 167, 249,
-  89, 120, 78, 45, 12, 201, 156, 34,
-  165, 43, 98, 133, 251, 49, 176, 88
-]);
+// Envelope crypto for the draw.
+//
+// Each giver's assignment is encrypted (AES-256-GCM) with its own random key.
+// The encrypted envelopes travel in the group link; the keys live on the
+// claim-once server. Neither half alone reveals who drew whom.
 
-let cachedKey: CryptoKey | null = null;
-
-export async function getEncryptionKey(): Promise<CryptoKey> {
-  if (cachedKey) return cachedKey;
-  
-  cachedKey = await window.crypto.subtle.importKey(
-    "raw",
-    ENCRYPTION_KEY_BYTES,
-    { name: "AES-GCM" },
-    false, // not extractable
-    ["encrypt", "decrypt"]
-  );
-  
-  return cachedKey;
+export function toBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export async function encryptText(text: string): Promise<string> {
-  const key = await getEncryptionKey();
-  const encodedText = new TextEncoder().encode(text);
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  
-  const encryptedData = await window.crypto.subtle.encrypt(
-    {
-      name: "AES-GCM",
-      iv
-    },
-    key,
-    encodedText
-  );
-
-  // Combine IV and encrypted data
-  const combined = new Uint8Array(iv.length + new Uint8Array(encryptedData).length);
-  combined.set(iv);
-  combined.set(new Uint8Array(encryptedData), iv.length);
-  
-  return btoa(String.fromCharCode(...combined));
+export function fromBase64Url(text: string): Uint8Array {
+  const b64 = text.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
 }
 
-export async function decryptText(encryptedText: string): Promise<string> {
+export function encodeJson(value: unknown): string {
+  return toBase64Url(new TextEncoder().encode(JSON.stringify(value)));
+}
+
+export function decodeJson<T>(text: string): T {
+  return JSON.parse(new TextDecoder().decode(fromBase64Url(text))) as T;
+}
+
+export function randomToken(bytes = 32): string {
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(bytes)));
+}
+
+const IV_LENGTH = 12;
+
+async function importKey(key: string, usage: KeyUsage) {
+  return crypto.subtle.importKey('raw', fromBase64Url(key), { name: 'AES-GCM' }, false, [usage]);
+}
+
+export async function encryptWithKey(plaintext: string, key: string): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, await importKey(key, 'encrypt'), new TextEncoder().encode(plaintext)));
+  const out = new Uint8Array(IV_LENGTH + ciphertext.length);
+  out.set(iv);
+  out.set(ciphertext, IV_LENGTH);
+  return toBase64Url(out);
+}
+
+/** Returns the plaintext, or null if the key doesn't match the envelope. */
+export async function decryptWithKey(envelope: string, key: string): Promise<string | null> {
   try {
-    const key = await getEncryptionKey();
-    const combined = Uint8Array.from(atob(encryptedText), c => c.charCodeAt(0));
-    
-    // Split IV and data
-    const iv = combined.slice(0, 12);
-    const encryptedData = combined.slice(12);
-
-    const decrypted = await window.crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv
-      },
-      key,
-      encryptedData
-    );
-
-    return new TextDecoder().decode(decrypted);
-  } catch (error) {
-    console.error('Decryption error:', error);
-    throw new Error('Failed to decrypt text');
+    const bytes = fromBase64Url(envelope);
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: bytes.slice(0, IV_LENGTH) }, await importKey(key, 'decrypt'), bytes.slice(IV_LENGTH));
+    return new TextDecoder().decode(plain);
+  } catch {
+    return null;
   }
-} 
+}

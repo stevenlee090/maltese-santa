@@ -1,12 +1,55 @@
-# Secret Santa
+# 🎀 Maltese Secret Santa
 
-<img align="right" height="160" src="https://user-images.githubusercontent.com/1037931/87014534-92e21280-c1cc-11ea-9675-5f2c0f3c287f.png"/>
+A pink, fluffy, ad-free Secret Santa for a small group of friends. The organiser takes part in the draw too, and can't see anyone else's match.
 
-Check it live on [mael.dev/secretsanta/](https://mael.dev/secretsanta/) 🎄
+Forked from [arcanis/secretsanta](https://github.com/arcanis/secretsanta) (MIT, see below) and reworked with a Maltese theme and a claim-once reveal.
 
-Should you appreciate this tool so much that you'd like to thank me, you can either drop a friendly note in this repository's issues, or be a [one-time sponsor](https://github.com/sponsors/arcanis?frequency=one-time&sponsor=arcanis). Either would make my day 😊
+## How it works
 
-<br/>
+1. **Organiser** opens the site, adds everyone's names (and optional gift ideas and "must / must not give to" rules), and presses **Draw**.
+2. The draw runs in the organiser's browser. Each giver's result is encrypted with its own random key:
+   - the **encrypted envelopes** go into the group link (in the `#` fragment, so they never reach the server);
+   - only the **keys** are sent to the server, stored per name.
+
+   Neither half on its own reveals who drew whom. The pairings are never shown, saved or exported.
+3. Everyone opens the **same link**, taps their own name, and unwraps their match.
+4. The server releases each key **once**, to the first device that claims that name, and remembers that device. After that, the name shows as "opened" for everyone else.
+
+### What this protects against (and what it doesn't)
+
+- ✅ Nobody can see the full draw on screen, the organiser included.
+- ✅ If someone opens a name that isn't theirs, the real person finds it already "opened" and knows something's up. The organiser can **reset** that name from the status panel so the right person can open it.
+- ⚠️ Peeking is *detectable*, not *impossible*. Whoever controls the Cloudflare account could, with deliberate effort, combine the database keys with the link. For a group of friends, being caught is the deterrent.
+
+## Running locally
+
+```sh
+corepack enable
+yarn install
+yarn db:migrate:local   # creates the local D1 database
+yarn preview            # builds the site and serves site + API on http://localhost:8787
+```
+
+`yarn test` runs the unit tests and `yarn typecheck` checks the types of both the site and the Worker.
+
+For UI work with hot reload, run `yarn wrangler dev` in one terminal and `yarn dev` in another (Vite proxies `/api` to the Worker).
+
+## Deploying (Cloudflare, free tier)
+
+```sh
+yarn wrangler login
+yarn wrangler d1 create maltese-santa      # copy the printed database_id into wrangler.jsonc
+yarn db:migrate:remote
+yarn deploy                                # prints your https://maltese-santa.<you>.workers.dev URL
+```
+
+## Project layout
+
+- `src/`: React site (organiser page `#/`, reveal page `#/reveal`)
+- `src/utils/links.ts`: draw + envelope sealing, claim tokens
+- `worker/index.ts`: claim-once API (`POST /api/draws`, `POST /api/draws/:id/claim`, `GET /api/draws/:id`, `POST /api/draws/:id/reset`)
+- `migrations/`: D1 schema
+- `static/maltese.svg`: the Maltese 🐶
 
 ## License (MIT)
 

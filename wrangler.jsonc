@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "maltese-santa",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Serves the built site from ./dist; anything that isn't a file (i.e. /api/*) hits the Worker.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "maltese-santa",
+      "database_id": "75f9b09f-17e3-4b4f-92bf-4c4dbb535b56",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

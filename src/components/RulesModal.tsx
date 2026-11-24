@@ -22,7 +22,7 @@ export function RulesModal({
   const { t } = useTranslation();
   const participant = participants[participantId];
   const [localRules, setLocalRules] = useState<Rule[]>(participant.rules);
-  const [localHint, setLocalHint] = useState<string>(participant.hint || '');
+  const [localWishes, setLocalWishes] = useState(participant.wishes ?? '');
 
   // Add escape key handler
   useEffect(() => {
@@ -56,8 +56,9 @@ export function RulesModal({
 
   const handleSave = () => {
     onChangeParticipants(produce(participants, draft => {
-      draft[participantId].rules = localRules;
-      draft[participantId].hint = localHint || undefined;
+      // Drop half-filled rules (no person selected) so they can't break the draw.
+      draft[participantId].rules = localRules.filter(rule => rule.targetParticipantId);
+      draft[participantId].wishes = localWishes.trim() || undefined;
     }));
     onClose();
   };
@@ -69,25 +70,24 @@ export function RulesModal({
       return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-xl w-full">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="fixed inset-0 bg-pink-900/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-xl w-full m-4 shadow-xl">
+        <h2 className="text-xl font-bold mb-4 text-pink-600">
           {t('rules.title', { name: participant.name })}
         </h2>
-        
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            {t('rules.hintLabel')}
-          </label>
-          <input
-            type="text"
-            value={localHint}
-            onChange={(e) => setLocalHint(e.target.value)}
-            placeholder={t('rules.hintPlaceholder')}
-            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+        <label className="block mb-6 space-y-1">
+          <span className="text-sm text-pink-900/70">{t('rules.wishesLabel')}</span>
+          <textarea
+            value={localWishes}
+            onChange={(e) => setLocalWishes(e.target.value)}
+            maxLength={280}
+            placeholder={t('rules.wishesPlaceholder')}
+            className="w-full p-2 border-2 border-pink-200 focus:border-pink-400 outline-none rounded-lg min-h-[70px]"
           />
-        </div>
-        
+          <span className="block text-xs text-pink-900/50">{t('rules.wishesHelp')}</span>
+        </label>
+
         <div className="space-y-4 mb-6">
           {localRules.map((rule, index) => (
             <div key={index} className="flex gap-2 items-center">
@@ -100,7 +100,7 @@ export function RulesModal({
               <select
                 value={rule.targetParticipantId}
                 onChange={(e) => updateRule(index, e.target.value)}
-                className="flex-1 p-2 border rounded"
+                className="flex-1 min-w-0 p-2 border-2 border-pink-200 rounded-lg"
               >
                 <option value="">{t('rules.selectParticipant')}</option>
                 {Object.values(participants)
@@ -128,7 +128,7 @@ export function RulesModal({
             className={`flex-1 p-2 rounded flex items-center justify-center gap-2
               ${hasMustNotRule 
                 ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                : 'bg-pink-400 hover:bg-pink-500'} text-white`}
           >
             <Link size={20} />
             {t('rules.addMustRule')}
@@ -139,7 +139,7 @@ export function RulesModal({
             className={`flex-1 p-2 rounded flex items-center justify-center gap-2
               ${hasMustRule 
                 ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-red-500 hover:bg-red-600'} text-white`}
+                : 'bg-rose-600 hover:bg-rose-700'} text-white`}
           >
             <LinkBreak size={20} />
             {t('rules.addMustNotRule')}
@@ -155,7 +155,7 @@ export function RulesModal({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            className="px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600"
           >
             {t('rules.saveRules')}
           </button>

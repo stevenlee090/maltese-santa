@@ -1,5 +1,4 @@
-import christmasWreath from '../../static/christmas-wreath.svg';
-import giftBox from '../../static/gift-box.svg';
+import { Bone, PawPrint } from '@phosphor-icons/react';
 
 interface PostCardProps {
   children: React.ReactNode;
@@ -8,16 +7,16 @@ interface PostCardProps {
 
 export function PostCard({ children, className = "" }: PostCardProps) {
   return (
-    <div className={`shadow-md relative z-10 transform rotate-2 transition-transform duration-300 p-3 bg-postcard rounded-lg ${className}`}>
-      <div className="relative p-8 bg-white">
-        <div className="absolute -top-6 -left-6 w-12 h-12 bg-[#5CC48A] rounded-full flex items-center justify-center transform -rotate-12">
-          <img className={`w-full h-full`} src={christmasWreath} />
+    <div className={`shadow-lg shadow-pink-300/40 relative z-10 transform rotate-1 transition-transform duration-300 p-3 bg-postcard rounded-2xl ${className}`}>
+      <div className="relative p-6 sm:p-8 bg-white rounded-xl">
+        <div className="absolute -top-5 -left-5 w-11 h-11 bg-pink-400 text-white rounded-full flex items-center justify-center transform -rotate-12 shadow">
+          <PawPrint size={24} weight="fill" />
         </div>
-        
+
         {children}
-        
-        <div className="absolute -bottom-6 -right-6 w-12 h-12 bg-[#EF3D3D] rounded-full flex items-center justify-center transform rotate-12">
-          <img className={`w-full h-full`} src={giftBox} />
+
+        <div className="absolute -bottom-5 -right-5 w-11 h-11 bg-pink-500 text-white rounded-full flex items-center justify-center transform rotate-12 shadow">
+          <Bone size={24} weight="fill" />
         </div>
       </div>
     </div>

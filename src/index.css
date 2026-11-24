@@ -2,39 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --pink-50: #fff1f6;
+  --pink-100: #ffe1ec;
+  --pink-300: #f9a8c9;
+  --pink-400: #f472b6;
+  --pink-500: #ec4899;
+  --pink-600: #db2777;
+  --cocoa: #4a2c38;
+}
+
+html {
+  color-scheme: light;
+}
+
 body {
-  background: url(../static/snow.png), url(../static/snow.png), #fefae8 url(../static/cats.png) bottom left no-repeat;
-  background-repeat: repeat, repeat, no-repeat;
-  background-size: auto auto, auto auto, contain;
-  background-attachment: fixed, fixed, fixed;
-  animation-name: snow;
-  animation-duration: 5s;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
-  font-family: 'Comic Sans MS';
+  color: var(--cocoa);
+  background:
+    url(../static/snow.png),
+    url(../static/maltese.svg) bottom 0 left 2vw / min(38vw, 420px) auto no-repeat,
+    radial-gradient(circle at 20% 10%, #ffffff 0, transparent 40%),
+    linear-gradient(160deg, var(--pink-50), var(--pink-100));
+  background-attachment: fixed, fixed, fixed, fixed;
+  animation: snow 6s linear infinite;
+  min-height: 100vh;
+}
+
+@media (max-width: 1023px) {
+  body {
+    background:
+      url(../static/snow.png),
+      radial-gradient(circle at 20% 10%, #ffffff 0, transparent 40%),
+      linear-gradient(160deg, var(--pink-50), var(--pink-100));
+    background-attachment: fixed, fixed, fixed;
+    animation: snow-mobile 6s linear infinite;
+  }
 }
 
 .bg-postcard {
   background: repeating-linear-gradient(
     45deg,
-    #5CC48A,
-    #5CC48A 30px,
-    #FFFFFF 30px,
-    #FFFFFF 60px,
-    #EF3D3D 60px,
-    #EF3D3D 90px,
-    #FFFFFF 90px,
-    #FFFFFF 120px
+    var(--pink-400),
+    var(--pink-400) 26px,
+    #ffffff 26px,
+    #ffffff 52px,
+    var(--pink-300) 52px,
+    var(--pink-300) 78px,
+    #ffffff 78px,
+    #ffffff 104px
   );
 }
 
 .bg-postcard-nowhite {
   background: repeating-linear-gradient(
     45deg,
-    #5CC48A,
-    #5CC48A 30px,
-    #EF3D3D 30px,
-    #EF3D3D 60px
+    var(--pink-500),
+    var(--pink-500) 26px,
+    var(--pink-400) 26px,
+    var(--pink-400) 52px
   );
 }
 
@@ -47,10 +72,32 @@ body {
 }
 
 @keyframes snow {
-  0% {
-    background-position: 130px 40px, 0 0, 0 0;
-  }
-  100% {
-    background-position: 130px 640px, 0 300px, 0 0
-  }
+  0% { background-position: 130px 40px, bottom 0 left 2vw, 0 0, 0 0; }
+  100% { background-position: 130px 640px, bottom 0 left 2vw, 0 0, 0 0; }
+}
+
+@keyframes snow-mobile {
+  0% { background-position: 130px 40px, 0 0, 0 0; }
+  100% { background-position: 130px 640px, 0 0, 0 0; }
+}
+
+@keyframes fall {
+  0% { transform: translateY(-10vh) rotate(0deg); }
+  100% { transform: translateY(110vh) rotate(360deg); }
+}
+
+@keyframes wag {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.animate-wag {
+  animation: wag 1.6s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { animation: none; }
+  .animate-wag { animation: none; }
+  .falling-treat { display: none; }
 }

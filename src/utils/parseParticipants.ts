@@ -25,8 +25,8 @@ export function formatParticipantText(participants: Record<string, Participant>)
       .filter(r => r.type === 'mustNot')
       .map(r => `!${participants[r.targetParticipantId]?.name ?? ''}`);
 
-    const hintPart = participant.hint
-      ? [`(${participant.hint})`]
+    const hintPart = participant.wishes
+      ? [`(${participant.wishes})`]
       : [];
 
     return `${[participant.name, ...hintPart, ...mustRules, ...mustNotRules].join(' ')}\n`;
@@ -43,7 +43,7 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
   const parsedLines: {
     line: number,
     name: string,
-    hint?: string,
+    wishes?: string,
     extra: string[],
   }[] = [];
 
@@ -57,7 +57,7 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
       ? line.slice(0, splitIndex).trim()
       : line.trim();
 
-    let hint: string | undefined;
+    let wishes: string | undefined;
     if (typeof splitIndex === 'number' && line[splitIndex] === '(') {
       let depth = 1;
       let j = splitIndex + 1;
@@ -68,7 +68,7 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
         j++;
       }
 
-      hint = line.slice(splitIndex + 1, j - 1);
+      wishes = line.slice(splitIndex + 1, j - 1);
       splitIndex = j;
     }
 
@@ -85,13 +85,13 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
     parsedLines.push({ 
       line: i + 1, 
       name: name.trim(), 
-      hint: hint?.trim(),
+      wishes: wishes?.trim(),
       extra: parts.filter(Boolean)
     });
   }
 
   // First pass: create participants and build name-to-id mapping
-  for (const {line, name, hint} of parsedLines) {
+  for (const {line, name, wishes} of parsedLines) {
     if (nameToId[name]) {
       return { 
         ok: false, 
@@ -103,7 +103,7 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
 
     const id = existingParticipants?.[name]?.id ?? crypto.randomUUID();
     nameToId[name] = id;
-    result[id] = { id, name, hint, rules: [] };
+    result[id] = { id, name, wishes, rules: [] };
   }
 
   // Second pass: process rules
