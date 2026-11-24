@@ -53,6 +53,11 @@ export async function sealDraw(
   return { bundle: { v: 2, id: drawId, envelopes, info: info.trim() || undefined }, keys };
 }
 
+/** Short share link: the envelopes are fetched from the server by id. */
+export function shortUrl(drawId: string) {
+  return `${appBaseUrl()}#/d/${drawId}`;
+}
+
 export function bundleUrl(bundle: DrawBundle) {
   return `${appBaseUrl()}#/reveal?d=${encodeJson(bundle)}`;
 }
@@ -71,8 +76,9 @@ export async function drawAndPublish(participants: Record<string, Participant>, 
   if (typeof sealed === 'string') return { ok: false, error: sealed };
 
   try {
-    const { id, adminToken } = await createDraw(sealed.keys);
-    return { ok: true, url: bundleUrl({ ...sealed.bundle, id }), drawId: id, adminToken };
+    const { envelopes, info } = sealed.bundle;
+    const { id, adminToken } = await createDraw(sealed.keys, { envelopes, info });
+    return { ok: true, url: shortUrl(id), drawId: id, adminToken };
   } catch {
     return { ok: false, error: 'server' };
   }

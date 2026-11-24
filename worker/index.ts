@@ -16,6 +16,8 @@ const MAX_PARTICIPANTS = 50;
 const MAX_NAME_LENGTH = 40;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,100}$/;
+const MAX_ENVELOPE_LENGTH = 2000;
+const MAX_INFO_LENGTH = 1000;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -43,13 +45,21 @@ async function readJson<T>(request: Request): Promise<T | null> {
 }
 
 async function createDraw(request: Request, env: Env) {
-  const body = await readJson<{ keys?: Record<string, string> }>(request);
+  const body = await readJson<{ keys?: Record<string, string>; bundle?: { envelopes?: Record<string, string>; info?: string } }>(request);
   const entries = Object.entries(body?.keys ?? {});
   if (entries.length < 3 || entries.length > MAX_PARTICIPANTS) return json({ error: 'badRequest' }, 400);
   for (const [name, key] of entries) {
     if (!name.trim() || name.length > MAX_NAME_LENGTH || typeof key !== 'string' || !KEY_PATTERN.test(key)) {
       return json({ error: 'badRequest' }, 400);
     }
+  }
+
+  // Envelopes (encrypted) + event info, so the share link can be just the id.
+  const envelopes = body?.bundle?.envelopes ?? {};
+  const info = typeof body?.bundle?.info === 'string' ? body.bundle.info.slice(0, MAX_INFO_LENGTH) : undefined;
+  const sameNames = Object.keys(envelopes).sort().join('\n') === entries.map(([n]) => n).sort().join('\n');
+  if (!sameNames || Object.values(envelopes).some(e => typeof e !== 'string' || e.length > MAX_ENVELOPE_LENGTH)) {
+    return json({ error: 'badRequest' }, 400);
   }
 
   const id = randomToken(12);
@@ -60,9 +70,16 @@ async function createDraw(request: Request, env: Env) {
     env.DB.prepare('INSERT INTO draws (id, admin_hash, created_at) VALUES (?, ?, ?)').bind(id, await sha256(adminToken), now),
     ...entries.map(([name, key]) =>
       env.DB.prepare('INSERT INTO slots (draw_id, name, key) VALUES (?, ?, ?)').bind(id, name, key)),
+    env.DB.prepare('INSERT INTO bundles (draw_id, data) VALUES (?, ?)').bind(id, JSON.stringify({ envelopes, info })),
   ]);
 
   return json({ id, adminToken }, 201);
+}
+
+async function getBundle(env: Env, drawId: string) {
+  const row = await env.DB.prepare('SELECT data FROM bundles WHERE draw_id = ?').bind(drawId).first<{ data: string }>();
+  if (!row) return json({ error: 'notFound' }, 404);
+  return json(JSON.parse(row.data));
 }
 
 async function claim(request: Request, env: Env, drawId: string) {
@@ -124,6 +141,7 @@ export default {
     const [, , drawId, action] = parts;
     if (!drawId && request.method === 'POST') return createDraw(request, env);
     if (drawId && !action && request.method === 'GET') return status(env, drawId);
+    if (drawId && action === 'bundle' && request.method === 'GET') return getBundle(env, drawId);
     if (drawId && action === 'claim' && request.method === 'POST') return claim(request, env, drawId);
     if (drawId && action === 'reset' && request.method === 'POST') return reset(request, env, drawId);
 

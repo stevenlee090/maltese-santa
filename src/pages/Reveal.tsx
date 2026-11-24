@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Gift, Info, Lock, PawPrint } from '@phosphor-icons/react';
@@ -7,7 +7,7 @@ import { Layout } from '../components/Layout';
 import { PostCard } from '../components/PostCard';
 import { Maltese } from '../components/Maltese';
 import { claimedNamesOnThisDevice, claimTokenFor, forgetClaim, openEnvelope, parseBundle } from '../utils/links';
-import { ApiError, claimSlot, getStatus } from '../utils/api';
+import { ApiError, claimSlot, getBundle, getStatus } from '../utils/api';
 import { Assignment, DrawBundle } from '../types';
 
 type View =
@@ -21,11 +21,26 @@ type View =
 
 export function Reveal() {
   const { t } = useTranslation();
+  const { drawId } = useParams();
   const [searchParams] = useSearchParams();
-  const bundle = useMemo(() => parseBundle(searchParams.get('d')), [searchParams]);
+  // Long links carry the envelopes; short links (#/d/<id>) fetch them.
+  const inlineBundle = useMemo(() => parseBundle(searchParams.get('d')), [searchParams]);
+  const [fetched, setFetched] = useState<DrawBundle | 'loading' | 'notFound' | 'error'>('loading');
 
-  if (!bundle) return <Message body={t('reveal.invalidLink')} />;
-  return <RevealDraw bundle={bundle} />;
+  useEffect(() => {
+    if (!drawId) return;
+    getBundle(drawId)
+      .then(({ envelopes, info }) => setFetched({ v: 2, id: drawId, envelopes, info }))
+      .catch(err => setFetched(err instanceof ApiError && err.code === 'notFound' ? 'notFound' : 'error'));
+  }, [drawId]);
+
+  if (!drawId) {
+    return inlineBundle ? <RevealDraw bundle={inlineBundle} /> : <Message body={t('reveal.invalidLink')} />;
+  }
+  if (fetched === 'loading') return <Message body={t('reveal.opening')} emoji="🐾" />;
+  if (fetched === 'notFound') return <Message body={t('reveal.notFound')} />;
+  if (fetched === 'error') return <Message body={t('reveal.error')} />;
+  return <RevealDraw bundle={fetched} />;
 }
 
 function RevealDraw({ bundle }: { bundle: DrawBundle }) {
@@ -243,13 +258,13 @@ function Unwrap({ assignment, info }: { assignment: Assignment; info?: string })
   );
 }
 
-function Message({ body }: { body: string }) {
+function Message({ body, emoji = '🙈' }: { body: string; emoji?: string }) {
   return (
     <Layout narrow>
       <div className="w-full">
         <PostCard>
           <div className="text-center space-y-3 py-6">
-            <div className="text-5xl">🙈</div>
+            <div className="text-5xl">{emoji}</div>
             <p className="text-pink-950/70">{body}</p>
           </div>
         </PostCard>

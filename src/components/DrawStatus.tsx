@@ -4,6 +4,7 @@ import { ArrowClockwise, ArrowSquareOut, CheckCircle, Circle } from '@phosphor-i
 import { CopyButton } from './CopyButton';
 import { getStatus, resetSlot } from '../utils/api';
 import { SlotStatus } from '../types';
+import { shortUrl } from '../utils/links';
 
 export interface PublishedDraw {
   url: string;
@@ -16,6 +17,8 @@ export function DrawStatus({ draw }: { draw: PublishedDraw }) {
   const { t } = useTranslation();
   const [slots, setSlots] = useState<SlotStatus[] | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  // Always share the short form (also upgrades draws made before short links).
+  const url = shortUrl(draw.drawId);
 
   const refresh = useCallback(async () => {
     try {
@@ -41,11 +44,11 @@ export function DrawStatus({ draw }: { draw: PublishedDraw }) {
     <div className="space-y-3">
       <div className="p-4 bg-pink-50 rounded-lg space-y-3">
         <p className="text-pink-950/70">{t('links.ready')}</p>
-        <CopyButton textToCopy={draw.url} className="w-full p-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600">
+        <CopyButton textToCopy={url} className="w-full p-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600">
           {t('links.copyGroupLink')}
         </CopyButton>
         <a
-          href={draw.url}
+          href={url}
           className="w-full p-2 bg-white text-pink-600 rounded-lg hover:bg-pink-100 flex items-center justify-center gap-2"
         >
           <ArrowSquareOut weight="bold" />

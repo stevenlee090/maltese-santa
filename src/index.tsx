@@ -13,6 +13,7 @@ import { Reveal } from './pages/Reveal';
 const router = createHashRouter([
   { path: "/", element: <Home /> },
   { path: "/reveal", element: <Reveal /> },
+  { path: "/d/:drawId", element: <Reveal /> },
 ]);
 
 const root = createRoot(document.getElementById("root")!);

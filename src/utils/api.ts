@@ -16,8 +16,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export function createDraw(keys: Record<string, string>) {
-  return request<{ id: string; adminToken: string }>('draws', { method: 'POST', body: JSON.stringify({ keys }) });
+export function createDraw(keys: Record<string, string>, bundle: { envelopes: Record<string, string>; info?: string }) {
+  return request<{ id: string; adminToken: string }>('draws', { method: 'POST', body: JSON.stringify({ keys, bundle }) });
+}
+
+export function getBundle(drawId: string) {
+  return request<{ envelopes: Record<string, string>; info?: string }>(`draws/${encodeURIComponent(drawId)}/bundle`);
 }
 
 export function claimSlot(drawId: string, name: string, token: string) {
