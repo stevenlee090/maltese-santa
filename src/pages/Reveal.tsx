@@ -25,21 +25,25 @@ export function Reveal() {
   const [searchParams] = useSearchParams();
   // Long links carry the envelopes; short links (#/d/<id>) fetch them.
   const inlineBundle = useMemo(() => parseBundle(searchParams.get('d')), [searchParams]);
+  const id = drawId ?? inlineBundle?.id;
   const [fetched, setFetched] = useState<DrawBundle | 'loading' | 'notFound' | 'error'>('loading');
 
+  // Always prefer the server's copy of the envelopes: it may have been
+  // upgraded (e.g. wishlist read tokens added) since a long link was shared.
   useEffect(() => {
-    if (!drawId) return;
-    getBundle(drawId)
-      .then(({ envelopes, info }) => setFetched({ v: 2, id: drawId, envelopes, info }))
+    if (!id) return;
+    getBundle(id)
+      .then(({ envelopes, info }) => setFetched({ v: 2, id, envelopes, info }))
       .catch(err => setFetched(err instanceof ApiError && err.code === 'notFound' ? 'notFound' : 'error'));
-  }, [drawId]);
+  }, [id]);
 
-  if (!drawId) {
-    return inlineBundle ? <RevealDraw bundle={inlineBundle} /> : <Message body={t('reveal.invalidLink')} />;
-  }
+  if (!id) return <Message body={t('reveal.invalidLink')} />;
   if (fetched === 'loading') return <Message body={t('reveal.opening')} emoji="🐾" />;
-  if (fetched === 'notFound') return <Message body={t('reveal.notFound')} />;
-  if (fetched === 'error') return <Message body={t('reveal.error')} />;
+  // Long links from before server-side bundles still work on their own.
+  if (fetched === 'notFound' || fetched === 'error') {
+    if (inlineBundle) return <RevealDraw bundle={inlineBundle} />;
+    return <Message body={fetched === 'notFound' ? t('reveal.notFound') : t('reveal.error')} />;
+  }
   return <RevealDraw bundle={fetched} />;
 }
 
