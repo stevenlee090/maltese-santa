@@ -2,6 +2,8 @@
 
 A pink, fluffy, ad-free Secret Santa for a small group of friends. The organiser takes part in the draw too, and can't see anyone else's match.
 
+**Live at [maltese-santa.maltese-santa.workers.dev](https://maltese-santa.maltese-santa.workers.dev)** 🐾
+
 Forked from [arcanis/secretsanta](https://github.com/arcanis/secretsanta) (MIT, see below) and reworked with a Maltese theme and a claim-once reveal.
 
 ## How it works
